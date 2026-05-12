@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MediSumai — Clinical Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #020b12;
+      --bg-2: #041018;
+      --surface: #071a26;
+      --surface-2: #0a2235;
+      --surface-3: #0d2a40;
+      --cyan: #00d4ff;
+      --cyan-dim: #0099bb;
+      --cyan-glow: rgba(0, 212, 255, 0.15);
+      --cyan-glow-strong: rgba(0, 212, 255, 0.35);
+      --green: #00ff9d;
+      --green-dim: #00cc7a;
+      --green-glow: rgba(0, 255, 157, 0.12);
+      --red: #ff4444;
+      --amber: #ffaa00;
+      --ink: #c8e8f5;
+      --ink-muted: #5a8fa8;
+      --ink-dim: #2a5a72;
+      --border: rgba(0, 212, 255, 0.15);
+      --border-bright: rgba(0, 212, 255, 0.4);
+      --radius: 2px;
+      --radius-lg: 4px;
+    }
+ 
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    html { scroll-behavior: smooth; }
+ 
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      cursor: default;
+    }
+ 
+    /* SCANLINE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+ 
+    /* GRID BACKGROUND */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+ 
+    /* HEADER */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(2, 11, 18, 0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+ 
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.6;
+    }
+ 
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+ 
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 12px var(--cyan-glow);
+    }
+ 
+    .logo-mark::before {
+      content: '+';
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+ 
+    .logo-mark::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+ 
+    .logo-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow: 0 0 20px var(--cyan-glow-strong);
+    }
+ 
+    .logo-text span { color: var(--green); }
+ 
+    .header-right { display: flex; align-items: center; gap: 16px; }
+ 
+    .status-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--green);
+      letter-spacing: 0.1em;
+    }
+ 
+    .status-dot::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+ 
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+      50% { opacity: 0.5; box-shadow: 0 0 4px var(--green); }
+    }
+ 
+    .sys-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      color: var(--ink-muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      text-transform: uppercase;
+    }
+ 
+    /* PAGE LAYOUT */
+    .page-layout {
+      display: flex;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+    }
+ 
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--bg-2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+ 
+    .sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 1px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--cyan), transparent 60%);
+      opacity: 0.4;
+    }
+ 
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+ 
+    .sidebar-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+ 
+    .clear-btn {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--red);
+      background: none;
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      padding: 3px 8px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+    }
+ 
+    .clear-btn:hover { background: rgba(255, 68, 68, 0.1); border-color: var(--red); }
+ 
+    .history-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .history-list::-webkit-scrollbar { width: 3px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--cyan-dim); }
+ 
+    .history-item {
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+      transition: all 0.2s;
+      position: relative;
+      cursor: default;
+    }
+ 
+    .history-item:hover {
+      border-color: var(--border);
+      background: var(--cyan-glow);
+    }
+ 
+    .history-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--cyan);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+ 
+    .history-item:hover::before { opacity: 1; }
+ 
+    .history-ts {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--ink-muted);
+      margin-bottom: 4px;
+      letter-spacing: 0.06em;
+    }
+ 
+    .history-preview {
+      font-size: 0.72rem;
+      color: var(--ink);
+      line-height: 1.4;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 6px;
+    }
+ 
+    .history-export {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      transition: text-shadow 0.2s;
+    }
+ 
+    .history-export:hover { text-shadow: 0 0 8px var(--green); }
+ 
+    .history-empty {
+      padding: 40px 16px;
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--ink-dim);
+      letter-spacing: 0.08em;
+      line-height: 2;
+    }
+ 
+    /* MAIN */
+    main {
+      flex: 1;
+      padding: 40px 48px 80px;
+      overflow-y: auto;
+      position: relative;
+    }
+ 
+    /* PAGE HERO */
+    .hero {
+      margin-bottom: 40px;
+      position: relative;
+    }
+ 
+    .hero-eyebrow {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+ 
+    .hero-eyebrow::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--cyan);
+    }
+ 
+    .page-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.8rem, 3.5vw, 3rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+ 
+    .page-title .highlight {
+      color: var(--cyan);
+      text-shadow: 0 0 30px var(--cyan-glow-strong);
+    }
+ 
+    .page-subtitle {
+      font-size: 0.95rem;
+      color: var(--ink-muted);
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      max-width: 560px;
+    }
+ 
+    .page-subtitle code {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--cyan);
+      font-size: 0.85em;
+      background: var(--cyan-glow);
+      padding: 1px 5px;
+      border: 1px solid var(--border);
+    }
+ 
+    /* WORKSPACE */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+ 
+    @media (max-width: 960px) {
+      .workspace { grid-template-columns: 1fr; }
+      main { padding: 28px 24px 60px; }
+      header { padding: 0 24px; }
+      .sidebar { display: none; }
+    }
+ 
+    /* PANEL */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.5;
+    }
+ 
+    /* Corner accents */
+    .panel-corner {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      z-index: 2;
+    }
+    .panel-corner.tl { top: -1px; left: -1px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+    .panel-corner.tr { top: -1px; right: -1px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+    .panel-corner.bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+    .panel-corner.br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+ 
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface-2);
+    }
+ 
+    .panel-icon {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--border-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+ 
+    .panel-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+ 
+    .panel-hint {
+      margin-left: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--ink-dim);
+      letter-spacing: 0.06em;
+    }
+ 
+    /* FORM */
+    form { display: contents; }
+ 
+    textarea {
+      width: 100%;
+      min-height: 400px;
+      border: none;
+      outline: none;
+      resize: vertical;
+      padding: 18px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      color: var(--ink);
+      background: var(--surface);
+      display: block;
+      caret-color: var(--cyan);
+    }
+ 
+    textarea::placeholder { color: var(--ink-dim); }
+    textarea:focus { background: var(--bg-2); }
+ 
+    .panel-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+ 
+    .footer-left { display: flex; align-items: center; gap: 10px; }
+ 
+    .char-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.06em;
+    }
+ 
+    .note-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      padding: 2px 8px;
+      letter-spacing: 0.08em;
+      background: var(--green-glow);
+    }
+ 
+    /* SUBMIT BUTTON */
+    button[type="submit"] {
+      background: transparent;
+      color: var(--cyan);
+      border: 1px solid var(--cyan);
+      padding: 9px 22px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    button[type="submit"]::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--cyan);
+      transform: translateX(-100%);
+      transition: transform 0.2s;
+      z-index: 0;
+    }
+ 
+    button[type="submit"]:hover::before { transform: translateX(0); }
+    button[type="submit"]:hover { color: var(--bg); box-shadow: 0 0 20px var(--cyan-glow-strong); }
+    button[type="submit"] span { position: relative; z-index: 1; }
+    button[type="submit"]:active { transform: scale(0.98); }
+ 
+    /* EXPORT BUTTON */
+    .btn-export {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      padding: 5px 12px;
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: auto;
+    }
+ 
+    .btn-export:hover {
+      background: var(--green-glow);
+      border-color: var(--green);
+      box-shadow: 0 0 12px rgba(0, 255, 157, 0.2);
+    }
+ 
+    /* OUTPUT */
+    .output-body {
+      padding: 20px;
+      min-height: 400px;
+    }
+ 
+    .empty-state {
+      height: 100%;
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+    }
+ 
+    .empty-icon-wrap {
+      width: 64px;
+      height: 64px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      font-size: 1.6rem;
+    }
+ 
+    .empty-icon-wrap::before, .empty-icon-wrap::after {
+      content: '';
+      position: absolute;
+      background: var(--cyan);
+    }
+ 
+    .empty-icon-wrap::before { width: 8px; height: 1px; top: -1px; left: -1px; }
+    .empty-icon-wrap::after { width: 1px; height: 8px; top: -1px; left: -1px; }
+ 
+    .empty-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--ink-dim);
+      line-height: 2;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+ 
+    /* RESULTS */
+    .results-stack { display: flex; flex-direction: column; gap: 16px; }
+ 
+    .result-card {
+      border: 1px solid var(--border);
+      background: var(--bg-2);
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--green), transparent);
+    }
+ 
+    .result-card-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 255, 157, 0.04);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+ 
+    .result-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 0.14em;
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      padding: 2px 8px;
+    }
+ 
+    .result-ts {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.06em;
+    }
+ 
+    .result-body { padding: 16px; }
+ 
+    /* SUMMARY SECTIONS */
+    .summary-section { margin-bottom: 18px; }
+    .summary-section:last-child { margin-bottom: 0; }
+ 
+    .section-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+ 
+    .section-label::before {
+      content: '';
+      width: 16px;
+      height: 1px;
+      background: var(--cyan);
+    }
+ 
+    .section-body {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.8;
+      color: var(--ink);
+      padding-left: 24px;
+    }
+ 
+    /* LOADING */
+    .loading-bar {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--green), var(--cyan), transparent);
+      background-size: 200%;
+      animation: scan 1s linear infinite;
+      display: none;
+    }
+ 
+    @keyframes scan {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+ 
+    .is-loading .loading-bar { display: block; }
+    .is-loading button[type="submit"] { opacity: 0.5; pointer-events: none; }
+ 
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--bg-2);
+      padding: 14px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+ 
+    footer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.3;
+    }
+ 
+    .footer-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--ink-dim);
+      letter-spacing: 0.1em;
+    }
+ 
+    .footer-warning {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--amber);
+      letter-spacing: 0.08em;
+    }
+ 
+    /* ANIMATIONS */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+ 
+    .hero { animation: fadeInUp 0.5s ease both; }
+    .panel { animation: fadeInUp 0.5s ease both; }
+    .panel:nth-child(2) { animation-delay: 0.08s; }
+  </style>
+</head>
+<body>
+ 
+  <header>
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <span class="logo-text">MEDI<span>SUMAI</span></span>
+    </div>
+    <div class="header-right">
+      <div class="status-dot">SYSTEM ONLINE</div>
+      <div class="sys-badge">GROQ · LLAMA-3</div>
+    </div>
+  </header>
+ 
+  <div class="page-layout">
+ 
+    <!-- HISTORY SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">// SESSION LOG</span>
+        {% if history %}
+        <button class="clear-btn" onclick="clearHistory()">PURGE</button>
+        {% endif %}
+      </div>
+      <div class="history-list">
+        {% if history %}
+          {% for entry in history %}
+          <div class="history-item">
+            <div class="history-ts">{{ entry.timestamp }}</div>
+            <div class="history-preview">{{ entry.note[:80] }}{% if entry.note|length > 80 %}...{% endif %}</div>
+            <a class="history-export" href="/export-pdf/{{ entry.id }}" target="_blank">↓ EXPORT_PDF</a>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="history-empty">
+            [ NO RECORDS ]<br><br>
+            AWAITING INPUT...<br>
+            RECORDS WILL<br>
+            POPULATE HERE
+          </div>
+        {% endif %}
+      </div>
+    </aside>
+ 
+    <!-- MAIN CONTENT -->
+    <main>
+ 
+      <div class="hero">
+        <div class="hero-eyebrow">CLINICAL INTELLIGENCE SYSTEM v2.0</div>
+        <h1 class="page-title">
+          CLINICAL NOTE<br>
+          <span class="highlight">SUMMARIZER</span>
+        </h1>
+        <p class="page-subtitle">
+          Paste a clinical note and receive a structured AI-generated summary in seconds.
+          Separate multiple notes with <code>---</code> for batch processing.
+        </p>
+      </div>
+ 
+      <form method="POST" id="noteForm">
+        <div class="workspace">
+ 
+          <!-- INPUT PANEL -->
+          <div class="panel" id="inputPanel">
+            <div class="panel-corner tl"></div>
+            <div class="panel-corner tr"></div>
+            <div class="panel-corner bl"></div>
+            <div class="panel-corner br"></div>
+            <div class="loading-bar"></div>
+            <div class="panel-header">
+              <div class="panel-icon">📋</div>
+              <span class="panel-label">// INPUT STREAM</span>
+              <span class="panel-hint">MULTI-NOTE: DELIMIT WITH ---</span>
+            </div>
+            <textarea
+              name="notes"
+              id="noteInput"
+              placeholder="// PASTE CLINICAL NOTE HERE&#10;&#10;// EXAMPLE:&#10;// Patient is a 52-year-old female presenting with a&#10;// 5-day history of productive cough, fever (38.4°C),&#10;// and right-sided pleuritic chest pain...&#10;&#10;// FOR MULTIPLE NOTES, SEPARATE WITH:&#10;// ---"
+              spellcheck="false"
+            >{{ notes_input }}</textarea>
+            <div class="panel-footer">
+              <div class="footer-left">
+                <span class="char-count" id="charCount">0 CHARS</span>
+                <span class="note-count" id="noteCount">1 NOTE</span>
+              </div>
+              <button type="submit" id="submitBtn">
+                <span>⚡</span>
+                <span>ANALYZE</span>
+              </button>
+            </div>
+          </div>
+ 
+          <!-- OUTPUT PANEL -->
+          <div class="panel">
+            <div class="panel-corner tl"></div>
+            <div class="panel-corner tr"></div>
+            <div class="panel-corner bl"></div>
+            <div class="panel-corner br"></div>
+            <div class="panel-header">
+              <div class="panel-icon">📄</div>
+              <span class="panel-label">// OUTPUT STREAM</span>
+            </div>
+            <div class="output-body">
+              {% if summaries %}
+                <div class="results-stack">
+                  {% for entry in summaries %}
+                  <div class="result-card">
+                    <div class="result-card-header">
+                      <span class="result-num">REC_{{ loop.index }}</span>
+                      <span class="result-ts">{{ entry.timestamp }}</span>
+                      <a href="/export-pdf/{{ entry.id }}" class="btn-export" target="_blank">↓ EXPORT</a>
+                    </div>
+                    <div class="result-body">
+                      {% set sections = entry.summary.split('\n\n') %}
+                      {% for section in sections %}
+                        {% if section.strip() %}
+                          <div class="summary-section">
+                            {% set lines = section.strip().split('\n') %}
+                            {% if lines[0].startswith('**') or lines[0].startswith('-') or lines[0].startswith('#') %}
+                              <div class="section-label">{{ lines[0].replace('**','').replace(':','').replace('#','').replace('- ','').strip() }}</div>
+                              <div class="section-body">{{ lines[1:]|join('\n') }}</div>
+                            {% else %}
+                              <div class="section-body">{{ section.strip() }}</div>
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="empty-state">
+                  <div class="empty-icon-wrap">🩺</div>
+                  <div class="empty-text">
+                    AWAITING INPUT<br>
+                    SUMMARY WILL RENDER HERE<br>
+                    AFTER ANALYSIS
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+ 
+        </div>
+      </form>
+    </main>
+ 
+  </div>
+ 
+  <footer>
+    <span class="footer-text">SYS: MEDISUMAI · POWERED BY GROQ · LLAMA-3-8B</span>
+    <span class="footer-warning">⚠ AI OUTPUT — NOT A SUBSTITUTE FOR CLINICAL JUDGMENT</span>
+  </footer>
+ 
+  <script>
+    const textarea = document.getElementById('noteInput');
+    const charCount = document.getElementById('charCount');
+    const noteCount = document.getElementById('noteCount');
+    const form = document.getElementById('noteForm');
+    const inputPanel = document.getElementById('inputPanel');
+ 
+    function updateCounts() {
+      const val = textarea.value;
+      const len = val.length;
+      charCount.textContent = len.toLocaleString() + ' CHARS';
+      const notes = val.split('---').filter(n => n.trim()).length || 1;
+      noteCount.textContent = notes + ' NOTE' + (notes !== 1 ? 'S' : '');
+    }
+ 
+    textarea.addEventListener('input', updateCounts);
+    updateCounts();
+ 
+    form.addEventListener('submit', () => {
+      if (textarea.value.trim()) inputPanel.classList.add('is-loading');
+    });
+ 
+    function clearHistory() {
+      if (!confirm('PURGE SESSION LOG?')) return;
+      fetch('/clear-history', { method: 'POST' }).then(() => location.reload());
+    }
+  </script>
+ 
+</body>
+</html>
